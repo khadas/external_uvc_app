@@ -38,19 +38,15 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-#include "mpi_enc.h"
+#include <stddef.h>
 
 struct uvc_encode {
     int width;
     int height;
     int fcc;
     int video_id;
-    MpiEncTestCmd mpi_cmd;
-    MpiEncTestData *mpi_data;
     void* extra_data;
     size_t extra_size;
-    void *h264_extra_data;
-    size_t h264_extra_size;
 };
 
 int uvc_encode_init(struct uvc_encode *e, int width, int height,int fcc);

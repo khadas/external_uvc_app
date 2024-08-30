@@ -35,6 +35,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <pthread.h>
 #include "uvc_control.h"
 #include "uvc_encode.h"
@@ -105,17 +106,51 @@ int get_uvc_streaming_intf(void)
     return uvc_streaming_intf;
 }
 
+int get_max_video_number() {
+    const char *dir_path = "/sys/class/video4linux/";
+    struct dirent *entry;
+    int max_video_number = -1;
+
+    DIR *dir = opendir(dir_path);
+    if (dir == NULL) {
+        printf("open %s failed.\n", dir_path);
+        return -1;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (strncmp(entry->d_name, "video", 5) == 0) {
+            int video_number = atoi(entry->d_name + 5);
+            if (video_number > max_video_number) {
+                max_video_number = video_number;
+            }
+        }
+    }
+
+    closedir(dir);
+
+    return max_video_number;
+}
+
 int check_uvc_video_id(void)
 {
     FILE *fp = NULL;
     char buf[1024];
     int i;
     char cmd[128];
+    int max = -1;
+    int uvc_cnt = 1;
+    int find_cnt = 0;
+
+    if (getenv("UVC_CNT"))
+        uvc_cnt = atoi(getenv("UVC_CNT"));
 
     memset(&uvc_ctrl, 0, sizeof(uvc_ctrl));
     uvc_ctrl[0].id = -1;
     uvc_ctrl[1].id = -1;
-    for (i = 0; i < 30; i++) {
+    max = get_max_video_number();
+    if (max < 0)
+        return -1;
+    for (i = max; i >= 0; i--) {
         snprintf(cmd, sizeof(cmd), "/sys/class/video4linux/video%d/name", i);
         if (access(cmd, F_OK))
             continue;
@@ -124,18 +159,25 @@ int check_uvc_video_id(void)
         if (fp) {
             if (fgets(buf, sizeof(buf), fp)) {
                 if (is_uvc_video(buf)) {
-                    if (uvc_ctrl[0].id < 0)
-                        uvc_ctrl[0].id = i;
-                    else if (uvc_ctrl[1].id < 0)
+                    find_cnt++;
+                    if (uvc_ctrl[1].id < 0)
                         uvc_ctrl[1].id = i;
+                    else if (uvc_ctrl[0].id < 0)
+                        uvc_ctrl[0].id = i;
                 }
             }
             pclose(fp);
         }
+        if (find_cnt >= uvc_cnt)
+            break;
     }
     if (uvc_ctrl[0].id < 0 && uvc_ctrl[1].id < 0) {
         printf("Please configure uvc...\n");
         return -1;
+    }
+    if (uvc_ctrl[0].id < 0 && uvc_ctrl[1].id >= 0) {
+        uvc_ctrl[0].id = uvc_ctrl[1].id;
+        uvc_ctrl[1].id = -1;
     }
     query_uvc_streaming_intf();
     return 0;
