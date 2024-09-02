@@ -1391,7 +1391,7 @@ uvc_handle_streamon_event(struct uvc_device *dev)
         dev->is_streaming = 1;
     }
 
-    uvc_control_init(dev->width, dev->height, dev->fcc);
+    uvc_control_init(dev->width, dev->height, dev->fcc, dev->fps);
     return 0;
 
 err:

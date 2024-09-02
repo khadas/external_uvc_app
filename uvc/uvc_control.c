@@ -149,7 +149,7 @@ void add_uvc_video()
         uvc_video_id_add(uvc_ctrl[1].id);
 }
 
-void uvc_control_init(int width, int height, int fcc)
+void uvc_control_init(int width, int height, int fcc, int fps)
 {
     pthread_mutex_lock(&lock);
     memset(&uvc_enc, 0, sizeof(uvc_enc));
@@ -159,7 +159,7 @@ void uvc_control_init(int width, int height, int fcc)
     }
     pthread_mutex_unlock(&lock);
     if (uvc_open_camera_cb)
-        uvc_open_camera_cb(width, height);
+        uvc_open_camera_cb(width, height, fcc, fps);
 }
 
 void uvc_control_exit()
